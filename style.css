@@ -1,7 +1,12 @@
-body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background: #f4f4f4;
-    margin: 0;
-    padding: 0;
+.done span {
+    text-decoration: line-through;
+    color: grey;
+}
+
+li {
+    margin: 8px 0;
+}
+
+li button {
+    margin-left: 10px;
 }
