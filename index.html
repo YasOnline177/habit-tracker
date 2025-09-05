@@ -7,22 +7,24 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>🪴 Habit Tracker</h1>
+    <div class="container">
+        <h1>🪴 Habit Tracker</h1>
 
-    <!--Habit input form -->
-    <form id="habit-form" autocomplete="off" class="card">
-        <label for="habit-input" class="sr-only">New Habit</label>
-        <input type="text" id="habit-input" placeholder="e.g., Drink water" required maxlength="40">
-        <button type="submit">Add Habit</button>
-    </form>
+        <!--Habit input form -->
+        <form id="habit-form" autocomplete="off" class="card">
+            <label for="habit-input" class="sr-only">New Habit</label>
+            <input type="text" id="habit-input" placeholder="e.g., Drink water" required maxlength="40">
+            <button type="submit">Add Habit</button>
+        </form>
 
-    <!-- Habits list -->
-    <section class="card">
-        <h2 class="section-title">Your Habits</h2>
-        <ul id="habit-list" class="habit-list">
-            <!-- Habits will render here -->
-        </ul>
-    </section>
+        <!-- Habits list -->
+        <section class="card">
+            <h2 class="section-title">Your Habits</h2>
+            <ul id="habit-list" class="habit-list">
+                <!-- Habits will render here -->
+            </ul>
+        </section>
+    </div>
 
     <script src="script.js"></script>
 </body>
