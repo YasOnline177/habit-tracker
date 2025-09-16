@@ -1,197 +1,404 @@
 /* =========================
-    Habit Tracker - Script
-    Author: Yasara Samaraweera
+  Habit Tracker - JavaScript
+  Author: Yasara Samaraweera
 ============================ */
 
-// ======================
-// DOM References
-// ======================
+/* ----------------------
+  DOM References
+------------------------ */
 const form = document.getElementById("habit-form");
 const input = document.getElementById("habit-input");
 const list = document.getElementById("habit-list");
 
-// ======================
-// State
-// ======================
-let habits = [];    // stores all habit objects
+const themeToggle = document.getElementById("theme-toggle");
+const quoteText = document.getElementById("quote-text");
+const newQuoteBtn = document.getElementById("new-quote");
 
-// ======================
-// Date Helper
-// ======================
+const calendarGrid = document.getElementById("calendar-grid");
+const calendarMonth = document.getElementById("calendar-month");
+const prevMonthBtn = document.getElementById("prev-month");
+const nextMonthBtn = document.getElementById("next-month");
 
-// Format today's date as YYYY-MM-DD
+/* ----------------------
+  Application state 
+------------------------ */
+let habits = []; // Array of { name, createdAt: "YYYY-MM-DD", doneDates: {"YYYY-MM-DD": true} }
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+
+/* ----------------------
+  Date Helpers 
+------------------------ */
+function formatLocalDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 function todayKey() {
-    return new Date().toISOString().split("T")[0];
+  return formatLocalDate(new Date());
 }
 
-// Get the previous day's key from a given date string
 function prevDayKey(key) {
-    const [y, m, d] = key.split("-").map(Number);
-    const dt = new Date(y, m - 1, d);
-    dt.setDate(dt.getDate() - 1);
-    return dt.toISOString().split("T")[0];
+  const [y, m, d] = key.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() - 1);
+  return formatLocalDate(dt);
+}
+function nextDayKey(key) {
+  const [y, m, d] = key.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + 1);
+  return formatLocalDate(dt);
 }
 
-// ======================
-// Habit Progress Helpers
-// ======================
-
-// Computer current streak of consecutive days completed
+/* ---------------------- 
+  Habit Logic Helpers 
+------------------------ */
 function computeStreak(habit) {
-    let streak = 0;
-    let date = todayKey();
-    while (habit.doneDates && habit.doneDates[date]) {
-        streak++;
-        date = prevDayKey(date);
-    }
-    return streak;
+  let streak = 0;
+  let dateKey = todayKey();
+  const start = habit.createdAt || todayKey();
+  while (dateKey >= start && habit.doneDates && habit.doneDates[dateKey]) {
+    streak++;
+    dateKey = prevDayKey(dateKey);
+  }
+  return streak;
 }
 
-// Count how many days were completed in the last N days 
 function countLastNDays(habit, n = 7) {
-    let count = 0;
-    let date = todayKey();
-    for (let i = 0; i < n; i++) {
-        if (habit.doneDates && habit.doneDates[date]) count++;
-        date = prevDayKey(date);
-    }
-    return count;
+  let count = 0;
+  let dateKey = todayKey();
+  const start = habit.createdAt || todayKey();
+  for (let i = 0; i < n; i++) {
+    if (dateKey < start) break;
+    if (habit.doneDates && habit.doneDates[dateKey]) count++;
+    dateKey = prevDayKey(dateKey);
+  }
+  return count;
 }
 
-// ======================
-// UI Rendering
-// ======================
+function getHabitWindowDates(habit, n = 7) {
+  const dates = [];
+  const today = new Date();
+  const start = new Date(habit.createdAt);
+  let dt = start < today ? start : today;
 
-// Create DOM elements for a habit item
+  for (let i = 0; i < n; i++) {
+    dates.push(formatLocalDate(dt));
+    dt.setDate(dt.getDate() + 1); // move forward
+  }
+  return dates;
+}
+
+/* ----------------------
+UI: Habit List Items 
+------------------------ */
 function createHabitDOM(habit) {
   const li = document.createElement("li");
 
-  // --- Habit name
-  const span = document.createElement("span");
-  span.textContent = habit.name;
-  span.className = "habit-name";
+  // Name
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "habit-name";
+  nameSpan.textContent = habit.name;
 
-  // --- Done button 
-  const doneButton = document.createElement("button");
+  // Buttons
+  const doneBtn = document.createElement("button");
+  doneBtn.className = "btn-done";
   const today = todayKey();
   const isDoneToday = habit.doneDates && habit.doneDates[today];
-  doneButton.textContent = isDoneToday ? "Done" : "Mark as done";
+  doneBtn.textContent = isDoneToday ? "Done" : "Mark as done";
   if (isDoneToday) li.classList.add("done");
 
-  doneButton.addEventListener("click", function () {
-    const date = todayKey();
-    if (!habit.doneDates) habit.doneDates = {};
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "btn-delete";
+  deleteBtn.textContent = "Delete";
 
-    if (habit.doneDates[date]) {
-        // unmark today's habit
-        delete habit.doneDates[date];
-        li.classList.remove("done");
-        doneButton.textContent = "Mark as done";
-    } else {
-        // Mark today's habit as done
-        habit.doneDates[date] = true;
-        li.classList.add("done");
-        doneButton.textContent = "Done";
-    }
-
-    saveHabits();
-
-    // Update streak and progress bar 
-    streakSpan.textContent = `Streak: ${computeStreak(habit)}`;
-    const last7 = countLastNDays(habit, 7);
-    bar.style.width = Math.round((last7 / 7) * 100) + "%";
-    progressLabel.textContent = `${last7}/7`;
-  });
-
-  // --- Delete button
-  const deleteButton = document.createElement("button");
-  deleteButton.textContent = "Delete";
-  deleteButton.addEventListener("click", function () {
-    li.remove();
-    habits = habits.filter((h) => h !== habit);
-    saveHabits();
-  });
-  
-  // --- Meta info (streak + 7-day progress)
+  // Meta (streak + progress bar)
   const meta = document.createElement("div");
   meta.className = "meta";
 
-  // Streak display 
-  const streakCount = computeStreak(habit);
   const streakSpan = document.createElement("span");
   streakSpan.className = "streak";
-  streakSpan.textContent = `Streak: ${streakCount}`;
+  streakSpan.textContent = `Streak: ${computeStreak(habit)}`;
 
-  // Progress display 
-  const last7Count = countLastNDays(habit, 7);
   const progressWrap = document.createElement("div");
   progressWrap.className = "progress";
 
   const bar = document.createElement("div");
   bar.className = "bar";
-  const pct = Math.round((last7Count / 7) * 100);
-  bar.style.width = pct + "%";
+  const last7 = countLastNDays(habit, 7);
+  bar.style.width = `${Math.round((last7 / 7) * 100)}%`;
 
   const progressLabel = document.createElement("span");
   progressLabel.className = "progress-label";
-  progressLabel.textContent = `${last7Count}/7`;
+  progressLabel.textContent = `${last7}/7`;
 
   progressWrap.appendChild(bar);
   meta.append(streakSpan, progressWrap, progressLabel);
 
-  // --- Append everything
-  li.appendChild(span);
-  li.appendChild(doneButton);
-  li.appendChild(deleteButton);
+  // Mini 7-day calendar
+  const miniCal = document.createElement("div");
+  miniCal.className = "calendar";
+
+  const windowDates = getHabitWindowDates(habit, 7);
+
+  windowDates.forEach((d) => {
+    const box = document.createElement("span");
+    box.className = "day-box";
+
+    if (d > todayKey()) {
+      box.classList.add("future-day");
+    } else if (d <=todayKey() && habit.doneDates && habit.doneDates[d]) {
+      box.classList.add("done-day");
+    }
+    miniCal.appendChild(box);
+  });
+
+  /* ------- Event: Mark done/undone ------- */
+  doneBtn.addEventListener("click", () => {
+    const key = todayKey();
+    if (!habit.doneDates) habit.doneDates = {};
+    if (habit.doneDates[key]) {
+      delete habit.doneDates[key];
+      li.classList.remove("done");
+      doneBtn.textContent = "Mark as done";
+    } else {
+      habit.doneDates[key] = true;
+      li.classList.add("done");
+      doneBtn.textContent = "Done";
+    }
+
+    saveHabits();
+
+    // Update UI 
+    streakSpan.textContent = `Streak: ${computeStreak(habit)}`;
+    const lastCount = countLastNDays(habit, 7);
+    bar.style.width = `${Math.round((lastCount / 7) * 100)}%`;
+    progressLabel.textContent = `${lastCount}/7`;
+
+    // Rebuild mini calendar 
+    miniCal.innerHTML = "";
+    const windowDates = getHabitWindowDates(habit, 7);
+    
+    windowDates.forEach(d => {
+      const box = document.createElement("span");
+      box.className = "day-box";
+      
+      if (d > todayKey()) {
+        // future day -> mark visually distinct
+        box.classList.add("future-day");
+      } else if (habit.doneDates && habit.doneDates[d]) {
+        // completed past/present day
+        box.classList.add("done-day");
+      }
+      miniCal.appendChild(box);
+    })
+
+    refreshCalendar();
+  });
+
+  /* ------- Event: Delete habit ------- */
+  deleteBtn.addEventListener("click", () => {
+    if (li.parentNode) li.parentNode.removeChild(li);
+    habits = habits.filter((h) => h !== habit);
+    saveHabits();
+    refreshCalendar();
+  });
+
+  // Assemble habit item
+  li.appendChild(nameSpan);
+
+  const btnRow = document.createElement("div");
+  btnRow.style.marginTop = "8px";
+  btnRow.appendChild(doneBtn);
+  btnRow.appendChild(deleteBtn);
+  li.appendChild(btnRow);
+
   li.appendChild(meta);
+  li.appendChild(miniCal);
 
   list.appendChild(li);
 }
 
-// ======================
-// Persistence
-// ======================
-
-// Load habits from localStorage
+/* ------------------------
+  Persistence (LocalStorage) 
+---------------------------- */
 function loadHabits() {
-  const stored = localStorage.getItem("habits");
-  if (stored) {
-    habits = JSON.parse(stored);
-    // Render each habit in the DOM
-    habits.forEach((habit) => {
-      createHabitDOM(habit);
+  const raw = localStorage.getItem("habits");
+  if (!raw) return;
+
+  try {
+    habits = JSON.parse(raw) || [];
+    habits.forEach((h) => {
+      if (!h.createdAt) {
+        const keys = h.doneDates ? Object.keys(h.doneDates).sort() : [];
+        h.createdAt = keys.length ? keys[0] : todayKey();
+      }
+      createHabitDOM(h);
     });
+  } catch (e) {
+    console.error("Failed to load habits - clearing storage", e);
+    habits = [];
+    localStorage.removeItem("habits");
   }
 }
-
-// Save habits array into localStorage
 function saveHabits() {
   localStorage.setItem("habits", JSON.stringify(habits));
 }
 
-// ======================
-// Event Listeners
-// ======================
+/* ---------------------- 
+  Form: Add New Habit
+------------------------ */
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const name = input.value.trim();
+  if (!name) return;
 
-// Handle new habit submission
-form.addEventListener("submit", function (e) {
-  e.preventDefault(); 
-
-  const habitName = input.value.trim();
-  if (habitName === "") return; 
-
-  const habit = {
-    name: habitName,
-    doneDates: {}    
-  };
-
+  const habit = { name, createdAt: todayKey(), doneDates: {} };
   habits.push(habit);
   saveHabits();
   createHabitDOM(habit);
-
-  input.value = ""; // clear input field
+  refreshCalendar();
+  input.value = "";
 });
-// ======================
-// Initialize app
-// ======================
+
+/* ---------------------- 
+  Theme Toggle 
+------------------------ */
+function applyTheme(t) {
+  if (t === "dark") document.body.classList.add("dark");
+  else document.body.classList.remove("dark");
+  localStorage.setItem("theme", t);
+}
+applyTheme(localStorage.getItem("theme") || "light");
+themeToggle.addEventListener("click", () => {
+  const next = document.body.classList.contains("dark") ? "light" : "dark";
+  applyTheme(next);
+  themeToggle.textContent = next === "dark" ? "☀️" : "🌙";
+});
+
+/* ---------------------- 
+  Quotes (Static List) 
+------------------------ */
+const QUOTES = [
+  "Don't wait. Start now.",
+  "Small daily improvements lead to big results.",
+  "Consistency is more important than intensity.",
+  "Progress is progress, no matter how small.",
+  "You don't have to be great to start, but you have to start to be great.",
+];
+function randomQuote() {
+  return QUOTES[Math.floor(Math.random() * QUOTES.length)];
+}
+function setQuote(q) {
+  if (quoteText) quoteText.textContent = q;
+}
+if (newQuoteBtn) newQuoteBtn.addEventListener("click", () => setQuote(randomQuote()));
+setQuote(randomQuote());
+
+/* ---------------------- 
+  Monthly Calendar 
+------------------------ */
+function getDayStatus(dateKey) {
+  const today = todayKey();
+  if (dateKey > today) return "";
+
+  let validCount = 0;
+  let doneCount = 0;
+
+  habits.forEach((h) => {
+    if (!h.createdAt) return;
+    if (dateKey >= h.createdAt) {
+      validCount++;
+      if (h.doneDates && h.doneDates[dateKey]) doneCount++;
+    }
+  });
+
+  if (validCount === 0 || doneCount === 0) return "";
+  if (doneCount === validCount) return "full";
+  return "partial";
+}
+
+function renderCalendar(year, month) {
+  calendarGrid.innerHTML = "";
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  calendarMonth.textContent = firstDay.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+  // Empty cells before first day
+  for (let i = 0; i < firstDay.getDay(); i++) {
+    const cell = document.createElement("div");
+    cell.className = "day-cell empty";
+    calendarGrid.appendChild(cell);
+  }
+
+  const tooltip = document.getElementById("tooltip");
+  if (!tooltip) {
+    console.error("Tooltip element not found!");
+    return;
+  }
+
+  // Calendar days
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const dt = new Date(year, month, d);
+    const key = formatLocalDate(dt);
+    const cell = document.createElement("div");
+    cell.className = "day-cell";
+    
+    const status = getDayStatus(key);
+    if (status) cell.classList.add(status);
+
+    cell.textContent = d;
+    calendarGrid.appendChild(cell);
+
+    /* ------- Tooltip events ------- */
+    cell.addEventListener("mouseenter", () => {
+      const statusList = habits
+        .filter(h => key >= h.createdAt)
+        .map(h => {
+          const today = todayKey();
+          const done = h.doneDates && h.doneDates[key];
+          if (key > today) return `${h.name}: ⏳ Future`;
+          return `${h.name}: ${done ? "✅ Done" : "❌ Missed"}`;
+        })
+        .join("<br>");
+
+      tooltip.innerHTML = `<strong>${dt.toDateString()}</strong><br>${statusList || "No habits"}`;
+      tooltip.style.display = "block";
+    });
+
+    cell.addEventListener("mousemove", (e) => {
+      tooltip.style.left = e.pageX + 12 + "px";
+      tooltip.style.top = e.pageY + 12 + "px";
+    });
+
+    cell.addEventListener("mouseleave", () => {
+      tooltip.style.display = "none";
+    });
+  }
+}
+
+/* ----------------------
+  Calendar Navigation
+------------------------ */
+if (prevMonthBtn) prevMonthBtn.addEventListener("click", () => {
+  currentMonth--;
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  renderCalendar(currentYear, currentMonth);
+});
+if (nextMonthBtn) nextMonthBtn.addEventListener("click", () => {
+  currentMonth++;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  renderCalendar(currentYear, currentMonth);
+});
+
+function refreshCalendar() {
+  renderCalendar(currentYear, currentMonth);
+}
+
+/* ----------------
+  Init 
+------------------ */
 loadHabits();
+refreshCalendar();

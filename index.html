@@ -1,31 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Habit Tracker</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="container">
-        <h1>🪴 Habit Tracker</h1>
 
-        <!--Habit input form -->
+        <!-- ======================
+            App Header
+        ======================== -->
+        <header class="card header-card">
+            <h1 class="app-title">🪴 Habit Tracker</h1>
+            <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">🌙</button>
+        </header>
+
+        <!-- ======================
+            Habit Input Form 
+        ======================= -->
         <form id="habit-form" autocomplete="off" class="card">
             <label for="habit-input" class="sr-only">New Habit</label>
             <input type="text" id="habit-input" placeholder="e.g., Drink water" required maxlength="40">
             <button type="submit">Add Habit</button>
         </form>
 
-        <!-- Habits list -->
+        <!-- ======================
+            Habits List Section
+        ======================== -->
         <section class="card">
-            <h2 class="section-title">Your Habits</h2>
-            <ul id="habit-list" class="habit-list">
-                <!-- Habits will render here -->
-            </ul>
+            <h2 class="section-title">🌱 Your Habits</h2>
+            <ul id="habit-list" class="habit-list"></ul>
+        </section>
+
+        <!-- ======================
+            Motivation (Quotes)
+        ======================== -->
+        <section class="card">
+            <h2 class="section-title">💬 Motivation</h2>
+            <p id="quote-text" class="quote-text">
+                "Stay consistent. Small steps add up."
+            </p>
+            <div class="quote-controls">
+                <button id="new-quote">New quote</button>
+            </div>
+        </section>
+
+        <!-- ======================
+            Calendar Section
+        ======================== -->
+        <section class="card">
+            <h2 class="section-title">📅 Calendar View</h2>
+
+            <!-- Month navigation -->
+            <div id="calendar-controls" class="calendar-controls">
+                <button id="prev-month">◀ Previous</button>
+                <span id="calendar-month" class="calendar-month-label"></span>
+                <button id="next-month">Next ▶</button>
+            </div>
+
+            <!-- Monthly calendar grid -->
+            <div id="calendar-grid" class="calendar-grid" aria-live="polite"></div>
+            
+            <!-- Hover tooltip -->
+            <div id="tooltip" class="tooltip"></div>
         </section>
     </div>
 
+    <!-- ======================
+        JavaScript
+    ======================== -->
     <script src="script.js"></script>
 </body>
 </html>
