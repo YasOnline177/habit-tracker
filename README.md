@@ -48,5 +48,5 @@ A simple, modern Habit Tracker web app built with **HTML, CSS, and JavaScript**.
 ## Author
 
 **Yasara Samaraweera**
-    - Github: [YasOnline177](https://github.com/YasOnline177)
-    - Email: yasarasamaraweera@gmail.com
+- Github: [YasOnline177](https://github.com/YasOnline177)
+- Email: yasarasamaraweera@gmail.com
